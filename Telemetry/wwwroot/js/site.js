@@ -3,7 +3,6 @@
 window.addEventListener('beforeunload', () => {
     const endTime = Date.now();
     const timeSpent = endTime - startTime;
-    const timeSpentAsString = timeSpent.toString();
     const tabTitle = document.title;
 
     const data = { tabTitle, timeSpent };

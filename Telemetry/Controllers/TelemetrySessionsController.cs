@@ -224,9 +224,11 @@ namespace Telemetry.Controllers
             await _context.SaveChangesAsync();
 
             UserPage userPage;
-            if (await _context.UserPages.AnyAsync(x => x.Page.Title == pageName && x.User == currentUser))
+            if (await _context.UserPages.AnyAsync(x => x.Page.Title == pageName && x.User == currentUser && x.TelemetrySessionId == session.Id))
             {
-                userPage = await _context.UserPages.FirstAsync(x => x.User == currentUser && x.Page.Title == pageName);
+                userPage = await _context.UserPages.FirstAsync(x => x.User == currentUser && 
+                                                            x.Page.Title == pageName && 
+                                                            x.TelemetrySessionId == session.Id);
                 userPage.Time += seconds;
             }
             else
