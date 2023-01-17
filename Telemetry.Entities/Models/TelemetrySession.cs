@@ -12,6 +12,7 @@ namespace Telemetry.Entities.Models
         public string UserId { get; set; }
         public virtual User User { get; set; }
         public virtual ICollection<UserPage> Pages { get; set; }
+        public DateTime SessionDate { get; set; }
         public double Time { get; set; }
         public byte Status { get; set; } // 0 - OFF, 1 - ON
     }

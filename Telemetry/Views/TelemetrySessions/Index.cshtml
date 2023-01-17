@@ -25,11 +25,14 @@
             <th>
                 @Html.DisplayNameFor(model => model.Status)
             </th>
+            <th>
+                @Html.DisplayNameFor(model => model.SessionDate)
+            </th>
             <th></th>
         </tr>
     </thead>
     <tbody>
-@foreach (var item in Model) {
+@foreach (var item in Model.OrderBy(x => x.SessionDate)) {
         <tr>
             <td>
                 @Html.DisplayFor(modelItem => item.User.Email)
@@ -40,13 +43,16 @@
             <td>
                 @foreach(var page in item.Pages)
                 {
-                    @Html.DisplayFor(modelItem => page.Page.Title) 
+                    @Html.DisplayFor(modelItem => page.Page.Title) @:&nbsp;
                     @Html.DisplayFor(modelItem => page.Time)
                     <br />
                 }
             </td>
             <td>
                 @Html.DisplayFor(modelItem => item.Status)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.SessionDate)
             </td>
             <td>
                 <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |

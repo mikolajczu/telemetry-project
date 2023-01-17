@@ -52,83 +52,6 @@ namespace Telemetry.Controllers
             return View(telemetrySession);
         }
 
-        //// GET: TelemetrySessions/Create
-        //public IActionResult Create()
-        //{
-        //    ViewData["UserId"] = new SelectList(_context.Users, "Id", "Id");
-        //    return View();
-        //}
-
-        //// POST: TelemetrySessions/Create
-        //// To protect from overposting attacks, enable the specific properties you want to bind to.
-        //// For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        //[HttpPost]
-        //[ValidateAntiForgeryToken]
-        //public async Task<IActionResult> Create([Bind("Id,UserId,Time,Status")] TelemetrySession telemetrySession)
-        //{
-        //    if (ModelState.IsValid)
-        //    {
-        //        _context.Add(telemetrySession);
-        //        await _context.SaveChangesAsync();
-        //        return RedirectToAction(nameof(Index));
-        //    }
-        //    ViewData["UserId"] = new SelectList(_context.Users, "Id", "Id", telemetrySession.UserId);
-        //    return View(telemetrySession);
-        //}
-
-        //// GET: TelemetrySessions/Edit/5
-        //public async Task<IActionResult> Edit(int? id)
-        //{
-        //    if (id == null || _context.TelemetrySessions == null)
-        //    {
-        //        return NotFound();
-        //    }
-
-        //    var telemetrySession = await _context.TelemetrySessions.FindAsync(id);
-        //    if (telemetrySession == null)
-        //    {
-        //        return NotFound();
-        //    }
-        //    ViewData["UserId"] = new SelectList(_context.Users, "Id", "Id", telemetrySession.UserId);
-        //    return View(telemetrySession);
-        //}
-
-        //// POST: TelemetrySessions/Edit/5
-        //// To protect from overposting attacks, enable the specific properties you want to bind to.
-        //// For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        //[HttpPost]
-        //[ValidateAntiForgeryToken]
-        //public async Task<IActionResult> Edit(int id, [Bind("Id,UserId,Time,Status")] TelemetrySession telemetrySession)
-        //{
-        //    if (id != telemetrySession.Id)
-        //    {
-        //        return NotFound();
-        //    }
-
-        //    if (ModelState.IsValid)
-        //    {
-        //        try
-        //        {
-        //            _context.Update(telemetrySession);
-        //            await _context.SaveChangesAsync();
-        //        }
-        //        catch (DbUpdateConcurrencyException)
-        //        {
-        //            if (!TelemetrySessionExists(telemetrySession.Id))
-        //            {
-        //                return NotFound();
-        //            }
-        //            else
-        //            {
-        //                throw;
-        //            }
-        //        }
-        //        return RedirectToAction(nameof(Index));
-        //    }
-        //    ViewData["UserId"] = new SelectList(_context.Users, "Id", "Id", telemetrySession.UserId);
-        //    return View(telemetrySession);
-        //}
-
         // GET: TelemetrySessions/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
@@ -180,13 +103,14 @@ namespace Telemetry.Controllers
             {
                 UserId = currentUser.Id,
                 Status = 1,
-                Time = 0
+                Time = 0,
+                SessionDate = DateTime.UtcNow
             };
 
             await _context.AddAsync(session);
             await _context.SaveChangesAsync();
 
-            return Ok();
+            return RedirectToAction("Index", "Home");
         }
 
         public async Task<IActionResult> ChangeSessionStatus(string id)
@@ -195,7 +119,7 @@ namespace Telemetry.Controllers
             session.Status = 0;
 
             await _context.SaveChangesAsync();
-            return Ok();
+            return RedirectToAction("Index", "Home");
         }
 
         [Authorize]

@@ -7,8 +7,11 @@ window.addEventListener('beforeunload', () => {
 
     const data = { tabTitle, timeSpent };
 
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/TelemetrySessions/SendInformationToSession');
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    xhr.send(JSON.stringify(data));
+    fetch('/TelemetrySessions/SendInformationToSession', {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    });
 });
