@@ -1,0 +1,29 @@
+version: "3.7"
+services:
+  mongodb_container:
+    image: mongo:latest
+    restart: always
+    # environment:
+    #   MONGO_INITDB_ROOT_USERNAME: root
+    #   MONGO_INITDB_ROOT_PASSWORD: password
+    ports:
+      - 27017:27017
+    # volumes:
+    #   - mongodb_data_container:/data/db
+
+  web:
+    build:
+      context: .
+      dockerfile: ./Telemetry/Dockerfile
+    restart: always
+    ports:
+      - 7256:443 # environment:
+      - 5196:80
+    #   MongoDB__Host: mongo
+    depends_on:
+      - mongodb_container
+    volumes:
+      - ${HOME}/.microsoft/usersecrets/:/root/.microsoft/usersecrets
+      - ${HOME}/.aspnet/https:/root/.aspnet/https/
+    links:
+      - mongodb_container
