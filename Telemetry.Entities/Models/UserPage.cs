@@ -1,20 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 
-namespace Telemetry.Entities.Models
+namespace Telemetry.Entities.Models;
+
+public class UserPage
 {
-    public class UserPage
-    {
-        public int Id { get; set; }
-        public string UserId { get; set; }
-        public virtual User User { get; set; }
-        public int PageId { get; set; }
-        public virtual Page Page { get; set; }
-        public int TelemetrySessionId { get; set; }
-        public virtual TelemetrySession TelemetrySession { get; set; }
-        public double Time { get; set; }
-    }
+    [BsonId]
+    public ObjectId Id { get; set; }
+    public string UserId { get; set; }
+    public string PageId { get; set; }
+    public string TelemetrySessionId { get; set; }
+    public double Time { get; set; }
 }

@@ -4,14 +4,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Mongo.AspNetCore.Identity;
 
 namespace Telemetry.Entities.Models
 {
-    public class User : IdentityUser
+    public class User : MongoIdentityUser
     {
-        public virtual ICollection<TelemetrySession> Sessions { get; set; }
-        public virtual ICollection<UserPage> Pages { get; set; }
-        public string? Description { get; set;}
-
+        public virtual ICollection<string> SessionsIds { get; set; }
+        public virtual ICollection<string> PagesIds { get; set; }
+        public string? Description { get; set; }
     }
 }

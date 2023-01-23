@@ -1,24 +1,42 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Mongo.AspNetCore.Identity;
+using MongoDB.Driver;
 using Telemetry.Entities;
 using Telemetry.Entities.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+
 // Add services to the container.
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<ApplicationDbContext>(options => {
-    options.UseNpgsql(connectionString);
-    options.UseLazyLoadingProxies();
-    });
+var connectionString = builder.Configuration.GetConnectionString("MongoDb");
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-builder.Services.AddDbContext<ApplicationDbContext>();
 builder.Services.AddControllersWithViews();
 
-builder.Services.AddDefaultIdentity<User>(options => options.SignIn.RequireConfirmedAccount = true)
-    .AddEntityFrameworkStores<ApplicationDbContext>();
+builder.Services.AddSingleton<IMongoClient>(new MongoClient(connectionString));
+
+builder.Services.AddIdentityWithMongoStoresUsingCustomTypes<User, MongoIdentityRole>(
+        "mongodb+srv://matthewrosse:mongodb@mern.bysakag.mongodb.net/appdb?retryWrites=true&w=majority")
+    .AddDefaultUI()
+    .AddDefaultTokenProviders();
+
+builder.Services.AddRazorPages();
+
 builder.Services.AddControllersWithViews();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+        policy =>
+        {
+            policy.WithOrigins("https://localhost:7256")
+                .AllowCredentials()
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        });
+});
 
 var app = builder.Build();
 
@@ -38,6 +56,9 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
+
+app.UseCors(MyAllowSpecificOrigins);
+
 
 app.UseAuthentication();
 app.UseAuthorization();

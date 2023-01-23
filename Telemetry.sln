@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Telemetry", "Telemetry\Tele
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Telemetry.Entities", "Telemetry.Entities\Telemetry.Entities.csproj", "{61A9C85C-565D-4188-B6A4-3D0660E74C7E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mongo.AspNetCore.Identity", "Mongo.AspNetCore.Identity\Mongo.AspNetCore.Identity.csproj", "{CA20AB34-F805-4226-8BAE-E95918FC5310}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{61A9C85C-565D-4188-B6A4-3D0660E74C7E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{61A9C85C-565D-4188-B6A4-3D0660E74C7E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{61A9C85C-565D-4188-B6A4-3D0660E74C7E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CA20AB34-F805-4226-8BAE-E95918FC5310}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CA20AB34-F805-4226-8BAE-E95918FC5310}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CA20AB34-F805-4226-8BAE-E95918FC5310}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CA20AB34-F805-4226-8BAE-E95918FC5310}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

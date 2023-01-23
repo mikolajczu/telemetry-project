@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Mongo.AspNetCore.Identity\Mongo.AspNetCore.Identity.csproj" />
     <ProjectReference Include="..\Telemetry.Entities\Telemetry.Entities.csproj" />
   </ItemGroup>
 
