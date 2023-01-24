@@ -1,9 +1,12 @@
+using System.Reflection;
+using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Mongo.AspNetCore.Identity;
 using MongoDB.Driver;
 using Telemetry.Entities;
 using Telemetry.Entities.Models;
+using Telemetry.Services.Mappers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,6 +43,10 @@ builder.Services.AddCors(options =>
                 .AllowAnyMethod();
         });
 });
+
+builder.Services.AddMediatR(Assembly.GetExecutingAssembly());
+builder.Services.AddTransient<ITelemetrySessionMapper, TelemetrySessionMapper>();
+builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
