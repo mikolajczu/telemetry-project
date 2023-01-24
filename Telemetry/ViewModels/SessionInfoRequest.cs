@@ -1,3 +1,5 @@
+using System.ComponentModel;
+
 namespace Telemetry.ViewModels;
 
 public class SessionInfoRequest
