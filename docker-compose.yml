@@ -1,0 +1,21 @@
+version: "3.7"
+services:
+  mongodb_container:
+    image: mongo:latest
+    restart: always
+    ports:
+      - 27017:27017
+
+  web:
+    build:
+      context: .
+      dockerfile: ./Telemetry/Dockerfile
+    restart: always
+    ports:
+      - 7256:443
+      - 5196:80
+    depends_on:
+      - mongodb_container
+    volumes:
+      - ${HOME}/.microsoft/usersecrets/:/root/.microsoft/usersecrets
+      - ${HOME}/.aspnet/https:/root/.aspnet/https/

@@ -1,0 +1,24 @@
+version: "3.7"
+services:
+  mongodb_container:
+    image: mongo:latest
+    container_name: mongodb_aspnet
+    restart: always
+    ports:
+      - 27017:27017
+
+  web:
+    build:
+      context: .
+      dockerfile: ./Telemetry/Dockerfile
+    restart: always
+    environment:
+      - "MongoDb:ConnectionString=mongodb://mongodb_aspnet:27017"
+      - "MongoDb:DatabaseName=telemetryDb"
+      - "MongoDb:UsersCollectionName=users"
+      - ASPNETCORE_ENVIRONMENT=Development
+    depends_on:
+      - mongodb_container
+    volumes:
+      - ${HOME}/.microsoft/usersecrets/:/root/.microsoft/usersecrets
+      - ${HOME}/.aspnet/https:/root/.aspnet/https/

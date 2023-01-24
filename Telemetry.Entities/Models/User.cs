@@ -1,17 +1,10 @@
-﻿using Microsoft.AspNetCore.Identity;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Mongo.AspNetCore.Identity;
 
-namespace Telemetry.Entities.Models
+namespace Telemetry.Entities.Models;
+
+public class User : MongoIdentityUser
 {
-    public class User : IdentityUser
-    {
-        public virtual ICollection<TelemetrySession> Sessions { get; set; }
-        public virtual ICollection<UserPage> Pages { get; set; }
-        public string? Description { get; set;}
-
-    }
+    public List<TelemetrySession> Sessions { get; set; } = new();
+    public List<Page> Pages { get; set; } = new();
+    public string? Description { get; set; }
 }

@@ -1,4 +1,5 @@
-﻿@model IEnumerable<Telemetry.Entities.Models.TelemetrySession>
+﻿@using Microsoft.AspNetCore.Mvc.TagHelpers
+@model IEnumerable<Telemetry.ViewModels.TelemetrySessionViewModel>
 
 @{
     ViewData["Title"] = "Index";
@@ -43,7 +44,7 @@
             <td>
                 @foreach(var page in item.Pages)
                 {
-                    @Html.DisplayFor(modelItem => page.Page.Title) @:&nbsp;
+                    @Html.DisplayFor(modelItem => page.Title) @:&nbsp;
                     @Html.DisplayFor(modelItem => page.Time)
                     <br />
                 }
