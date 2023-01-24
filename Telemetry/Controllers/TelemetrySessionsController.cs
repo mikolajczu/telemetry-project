@@ -2,8 +2,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using Telemetry.Configuration;
 using Telemetry.Entities.Models;
 using Telemetry.Services.Commands;
 using Telemetry.Services.Mappers;
@@ -21,12 +23,12 @@ public class TelemetrySessionsController : Controller
     private readonly ISender _mediator;
 
     public TelemetrySessionsController(IMongoClient mongoClient, ILogger<TelemetrySessionsController> logger,
-        UserManager<User> userManager, ITelemetrySessionMapper mapper, ISender mediator)
+        UserManager<User> userManager, ITelemetrySessionMapper mapper, ISender mediator, IOptions<MongoDbSettings> mongoDbSettings)
     {
         _logger = logger;
         _userManager = userManager;
-        var mongoDb = mongoClient.GetDatabase("appdb");
-        _users = mongoDb.GetCollection<User>("users");
+        var mongoDb = mongoClient.GetDatabase(mongoDbSettings.Value.DatabaseName);
+        _users = mongoDb.GetCollection<User>(mongoDbSettings.Value.UsersCollectionName);
         _mapper = mapper;
         _mediator = mediator;
     }

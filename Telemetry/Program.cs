@@ -2,8 +2,10 @@ using System.Reflection;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Mongo.AspNetCore.Identity;
 using MongoDB.Driver;
+using Telemetry.Configuration;
 using Telemetry.Entities;
 using Telemetry.Entities.Models;
 using Telemetry.Services.Mappers;
@@ -13,18 +15,20 @@ var builder = WebApplication.CreateBuilder(args);
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
 // Add services to the container.
-var connectionString = builder.Configuration.GetConnectionString("MongoDb");
-
-Console.WriteLine($"Connection string to: {connectionString}");
-
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddControllersWithViews();
 
-builder.Services.AddSingleton<IMongoClient>(new MongoClient(connectionString));
+var mongoDbSettings = new MongoDbSettings();
+
+builder.Configuration.Bind(MongoDbSettings.SectionName, mongoDbSettings);
+
+builder.Services.AddSingleton(Options.Create(mongoDbSettings));
+
+builder.Services.AddSingleton<IMongoClient>(new MongoClient(mongoDbSettings.ConnectionString));
 
 builder.Services.AddIdentityWithMongoStoresUsingCustomTypes<User, MongoIdentityRole>(
-        connectionString)
+        $"{mongoDbSettings.ConnectionString}/{mongoDbSettings.DatabaseName}")
     .AddDefaultUI()
     .AddDefaultTokenProviders();
 

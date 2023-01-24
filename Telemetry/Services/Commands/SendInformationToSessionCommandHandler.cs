@@ -1,10 +1,11 @@
 using System.Text.Json;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using Telemetry.Configuration;
 using Telemetry.Entities.Models;
-using Telemetry.ViewModels;
 
 namespace Telemetry.Services.Commands;
 
@@ -14,15 +15,19 @@ public class SendInformationToSessionCommandHandler : IRequestHandler<SendInform
     private readonly UserManager<User> _userManager;
     private readonly IMongoCollection<User> _users;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    
-    public SendInformationToSessionCommandHandler(ILogger<SendInformationToSessionCommandHandler> logger, UserManager<User> userManager, IMongoClient mongoClient, IHttpContextAccessor httpContextAccessor)
+
+    public SendInformationToSessionCommandHandler(ILogger<SendInformationToSessionCommandHandler> logger,
+        UserManager<User> userManager,
+        IMongoClient mongoClient,
+        IHttpContextAccessor httpContextAccessor,
+        IOptions<MongoDbSettings> mongoDbSettings)
     {
         _logger = logger;
         _userManager = userManager;
-        _users = mongoClient.GetDatabase("appdb").GetCollection<User>("users");
+        _users = mongoClient.GetDatabase(mongoDbSettings.Value.DatabaseName).GetCollection<User>(mongoDbSettings.Value.UsersCollectionName);
         _httpContextAccessor = httpContextAccessor;
     }
-    
+
     public async Task<Unit> Handle(SendInformationToSessionCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Inside SendInformationToSession");
@@ -66,9 +71,9 @@ public class SendInformationToSessionCommandHandler : IRequestHandler<SendInform
 
             //session.Time += request.TimeSpent / 1000;
             _logger.LogInformation($"session.Time zwiekszone o {request.Data.TimeSpent / 1000}");
-                
+
             var updateSessionPageDefinition = Builders<User>.Update.Set(u => u.Sessions, user.Sessions);
-                
+
             await _users.UpdateOneAsync(u => u.Id == user.Id, updateSessionPageDefinition);
         }
         else if (!pageExistsInSession)
@@ -79,11 +84,11 @@ public class SendInformationToSessionCommandHandler : IRequestHandler<SendInform
                 Title = request.Data.TabTitle,
                 Time = request.Data.TimeSpent / 1000
             };
-                
+
             session.Pages.Add(sessionPage);
 
             var updateSessionPageDefinition = Builders<User>.Update.Set(u => u.Sessions, user.Sessions);
-                
+
             await _users.FindOneAndUpdateAsync(u => u.Id == user.Id, updateSessionPageDefinition);
 
             user.Pages.FirstOrDefault(p => p.Title == request.Data.TabTitle).Time += request.Data.TimeSpent / 1000;
@@ -101,12 +106,12 @@ public class SendInformationToSessionCommandHandler : IRequestHandler<SendInform
             session.Pages.FirstOrDefault(p => p.Title == request.Data.TabTitle).Time += request.Data.TimeSpent / 1000;
             //session.Time += request.TimeSpent / 1000;
             _logger.LogInformation($"session.Time zwiekszone o {request.Data.TimeSpent / 1000}");
-                
+
             var updateSessionPageDefinition = Builders<User>.Update.Set(u => u.Sessions, user.Sessions);
-                
+
             await _users.UpdateOneAsync(u => u.Id == user.Id, updateSessionPageDefinition);
         }
-        
+
         return Unit.Value;
     }
 }

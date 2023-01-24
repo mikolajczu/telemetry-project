@@ -1,4 +1,6 @@
+using Microsoft.Extensions.Options;
 using MongoDB.Driver;
+using Telemetry.Configuration;
 using Telemetry.Entities.Models;
 using Telemetry.ViewModels;
 
@@ -9,9 +11,9 @@ public class TelemetrySessionMapper : ITelemetrySessionMapper
     private readonly IMongoCollection<User> _users;
     private readonly ILogger<TelemetrySessionMapper> _logger;
 
-    public TelemetrySessionMapper(IMongoClient mongoClient, ILogger<TelemetrySessionMapper> logger)
+    public TelemetrySessionMapper(IMongoClient mongoClient, ILogger<TelemetrySessionMapper> logger, IOptions<MongoDbSettings> mongoDbSettings)
     {
-        _users = mongoClient.GetDatabase("appdb").GetCollection<User>("users");
+        _users = mongoClient.GetDatabase(mongoDbSettings.Value.DatabaseName).GetCollection<User>(mongoDbSettings.Value.UsersCollectionName);
         _logger = logger;
     }
     public async Task<IEnumerable<TelemetrySessionViewModel>> Map(ICollection<TelemetrySession> sessions)
