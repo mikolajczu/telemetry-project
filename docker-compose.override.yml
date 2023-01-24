@@ -21,14 +21,18 @@ services:
     #   - 5196:80
     #   - 7256:443
     environment:
+      - "ConnectionStrings:MongoDb=mongodb://mongodb_aspnet:27017/appdb"
       - ASPNETCORE_ENVIRONMENT=Development
-      - "ConnectionStrings:MongoDb=mongodb://telemetrydb:27017/appdb"
+      # - ASPNETCORE_URLS=https://+:443;http://+:80
+      # - ASPNETCORE_Kestrel__Certificates__Default__Password=password
+      # - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
     depends_on:
       - mongodb_container
     volumes:
       - ${HOME}/.microsoft/usersecrets/:/root/.microsoft/usersecrets
       - ${HOME}/.aspnet/https:/root/.aspnet/https/
-    links:
-      - mongodb_container
+      #- ~/.aspnet/https:/https:ro
+    # links:
+    #   - mongodb_container
 # volumes:
 #   - mongodb_data_container

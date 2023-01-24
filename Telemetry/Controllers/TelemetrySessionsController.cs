@@ -1,304 +1,254 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Telemetry.Entities;
 using Telemetry.Entities.Models;
 using Telemetry.ViewModels;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
-namespace Telemetry.Controllers
+namespace Telemetry.Controllers;
+
+public class TelemetrySessionsController : Controller
 {
-    public class TelemetrySessionsController : Controller
+    private readonly UserManager<User> _userManager;
+    private readonly ILogger<TelemetrySessionsController> _logger;
+    private readonly IMongoCollection<User> _users;
+
+    public TelemetrySessionsController(IMongoClient mongoClient, ILogger<TelemetrySessionsController> logger,
+        UserManager<User> userManager)
     {
-        private readonly UserManager<User> _userManager;
-        private readonly ILogger<TelemetrySessionsController> _logger;
-        private readonly IMongoCollection<TelemetrySession> _telemetrySessions;
-        private readonly IMongoCollection<Page> _pages;
-        private readonly IMongoCollection<User> _users;
-        private readonly IMongoCollection<UserPage> _userPages;
+        _logger = logger;
+        _userManager = userManager;
+        var mongoDb = mongoClient.GetDatabase("appdb");
+        _users = mongoDb.GetCollection<User>("users");
+    }
 
-        public TelemetrySessionsController(IMongoClient mongoClient, ILogger<TelemetrySessionsController> logger,
-            UserManager<User> userManager)
+    ////// GET: TelemetrySessions
+    [Authorize]
+    public async Task<IActionResult> Index()
+    {
+        var user = await _userManager.GetUserAsync(User);
+
+        return View(await MapToTelemetrySessionViewModels(user.Sessions));
+    }
+
+    private async Task<List<TelemetrySessionViewModel>> MapToTelemetrySessionViewModels(
+        List<TelemetrySession> sessions)
+    {
+        _logger.LogInformation("BEGGINING MAPPING");
+
+        var userId = sessions.FirstOrDefault()?.UserId;
+        var user = await _users.Find(u => u.Id == userId).FirstOrDefaultAsync();
+
+        var viewModels = sessions.Select(s => MapToTelemetrySessionViewModel(s, user)).ToList();
+
+        _logger.LogInformation("END MAPPING");
+
+        return viewModels.ToList();
+    }
+
+    private TelemetrySessionViewModel MapToTelemetrySessionViewModel(TelemetrySession session, User user)
+    {
+        var viewmodel = new TelemetrySessionViewModel
         {
-            _logger = logger;
-            _userManager = userManager;
-            var mongoDb = mongoClient.GetDatabase("appdb");
-            _telemetrySessions = mongoDb.GetCollection<TelemetrySession>("telemetrySessions");
-            _pages = mongoDb.GetCollection<Page>("pages");
-            _users = mongoDb.GetCollection<User>("users");
-            _userPages = mongoDb.GetCollection<UserPage>("userPages");
-        }
-
-        //// GET: TelemetrySessions
-        public async Task<IActionResult> Index(CancellationToken cancellationToken = default)
-        {
-            var sessions = await _telemetrySessions
-                .Find(_ => true)
-                .ToListAsync(cancellationToken);
-
-
-            return View(await MapToTelemetrySessionViewModel(sessions));
-        }
-
-        private async Task<List<TelemetrySessionViewModel>> MapToTelemetrySessionViewModel(
-            List<TelemetrySession> sessions, CancellationToken ct = default)
-        {
-            _logger.LogInformation("BEGGINING MAPPING");
-            var viewModels = new List<TelemetrySessionViewModel>();
-            foreach (var session in sessions)
+            Id = session.Id.ToString(),
+            User = new UserViewModel
             {
-                var user = await _users.Find(u => u.Id == session.UserId.ToString()).FirstOrDefaultAsync(ct);
-                var userViewModel = new UserViewModel
-                {
-                    Id = user.Id,
-                    Email = user.Email
-                };
+                Id = user.Id,
+                Email = user.Email
+            },
+            SessionDate = session.SessionDate,
+            Status = session.Status,
+            //Time = session.Time,
+            Time = session.Pages.Sum(p => p.Time),
+            Pages = session.Pages.Select(p => new PageViewModel
+            {
+                Id = p.Id.ToString(),
+                Title = p.Title,
+                Time = p.Time
+            }).ToList()
+        };
 
-                var filter = Builders<Page>.Filter.In(x => x.Id, session.PagesIds.Select(ObjectId.Parse).ToList());
+        return viewmodel;
+    }
 
-                //var pages = await _pages.Find(p => session.PagesIds.Contains(p.Id.ToString())).ToListAsync(ct);
-                var pages = await _pages.Find(filter).ToListAsync(ct);
+    ////// GET: TelemetrySessions/Details/5
+    [Authorize]
+    public async Task<IActionResult> Details(string? id)
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (id is null)
+            return NotFound();
 
-                var pagesViewModels = pages.Select(p => new UserPageViewModel
-                {
-                    Page = new PageViewModel
-                    {
-                        Id = p.Id.ToString(),
-                        Title = p.Title
-                    },
-                    // to zly czas chyba
-                    Time = session.Time
-                }).ToList();
+        var telemetrySession = user.Sessions.FirstOrDefault(s => s.Id == ObjectId.Parse(id));
 
-                var viewModel = new TelemetrySessionViewModel
-                {
-                    Id = session.Id.ToString(),
-                    SessionDate = session.SessionDate,
-                    Status = session.Status,
-                    Time = session.Time,
-                    UserId = session.UserId,
-                    User = userViewModel,
-                    Pages = pagesViewModels
-                };
-                viewModels.Add(viewModel);
-            }
-
-            _logger.LogInformation("END MAPPING");
-            return viewModels;
+        if (telemetrySession is null)
+        {
+            return NotFound();
         }
 
-        //// GET: TelemetrySessions/Details/5
-        public async Task<IActionResult> Details(string? id, CancellationToken ct = default)
+        return View(MapToTelemetrySessionViewModel(telemetrySession, user));
+    }
+
+    ////// GET: TelemetrySessions/Delete/5
+    [Authorize]
+    public async Task<IActionResult> Delete(string? id)
+    {
+        if (id is null)
+            return NotFound();
+
+        var user = await _userManager.GetUserAsync(User);
+
+        var telemetrySession = user.Sessions.FirstOrDefault(s => s.Id == ObjectId.Parse(id));
+
+        if (telemetrySession is null)
         {
-            if (id is null)
-                return NotFound();
-
-            var filter = Builders<TelemetrySession>.Filter.Where(x => x.Id == ObjectId.Parse(id));
-
-            //var telemetrySession = await _telemetrySessions
-            //    .Find(t => t.Id.ToString() == id)
-            //    .FirstOrDefaultAsync(ct);
-            var telemetrySession = await _telemetrySessions.Find(filter).FirstOrDefaultAsync(ct);
-            if (telemetrySession is null)
-            {
-                return NotFound();
-            }
-
-            return View(await MapToViewModel(telemetrySession));
+            return NotFound();
         }
 
-        private async Task<TelemetrySessionViewModel> MapToViewModel(TelemetrySession session,
-            CancellationToken ct = default)
+        return View(MapToTelemetrySessionViewModel(telemetrySession, user));
+    }
+
+    ////// POST: TelemetrySessions/Delete/5
+    [HttpPost, ActionName("Delete")]
+    [Authorize]
+    public async Task<IActionResult> DeleteConfirmed(string id)
+    {
+        var user = await _userManager.GetUserAsync(User);
+
+        var updateDefinition =
+            Builders<User>.Update.PullFilter(u => u.Sessions, s => s.Id == ObjectId.Parse(id));
+
+        await _users.FindOneAndUpdateAsync(u => u.Id == user.Id, updateDefinition);
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    [Authorize]
+    public async Task<IActionResult> CreateNewSession()
+    {
+        var currentUser = await _userManager.GetUserAsync(User);
+
+        var session = new TelemetrySession
         {
-            var user = await _users.Find(u => u.Id == session.UserId).FirstOrDefaultAsync(ct);
-            var filter = Builders<Page>.Filter.In(p => p.Id, session.PagesIds.Select(ObjectId.Parse).ToList());
-            //var pages = await _pages.Find(p => session.PagesIds.Contains(p.Id.ToString())).ToListAsync(ct);
-            var pages = await _pages.Find(filter).ToListAsync(ct);
-            var viewmodel = new TelemetrySessionViewModel
+            Id = ObjectId.GenerateNewId(),
+            UserId = currentUser.Id,
+            Status = 1,
+            SessionDate = DateTime.UtcNow,
+            Pages = new List<Page>()
+        };
+
+        var updateDefinition = Builders<User>.Update.Push(u => u.Sessions, session);
+
+        _logger.LogInformation("Before creating new session");
+        await _users.UpdateOneAsync(u => u.Id == currentUser.Id, updateDefinition);
+        _logger.LogInformation("After creating new session");
+
+
+        return RedirectToAction("Index", "Home");
+    }
+
+    public async Task<IActionResult> ChangeSessionStatus(string id)
+    {
+        var searchDefinition = Builders<User>.Filter.Eq(u => u.Id, id);
+        var sessionUser = await _users.Find(searchDefinition).FirstOrDefaultAsync();
+        sessionUser.Sessions.ForEach(s => s.Status = 0);
+            
+
+        await _users.UpdateOneAsync(u => u.Id == id, Builders<User>.Update.Set(s => s.Sessions, sessionUser.Sessions));
+            
+        _logger.LogInformation("Session status changed to 0");
+
+        return RedirectToAction("Index", "Home");
+    }
+
+    [Authorize]
+    [HttpPost]
+    public async Task<IActionResult> SendInformationToSession([FromBody] SessionInfoRequest request)
+    {
+        _logger.LogInformation("Inside SendInformationToSession");
+
+        _logger.LogInformation(JsonSerializer.Serialize(request));
+        _logger.LogInformation($"TabTitle: {request.TabTitle}");
+        _logger.LogInformation($"TimeSpent: {request.TimeSpent}");
+
+        _logger.LogInformation($"Seconds = {request.TimeSpent}");
+
+        var userId = (await _userManager.GetUserAsync(User)).Id;
+        var user = await _users.Find(u => u.Id == userId).FirstOrDefaultAsync();
+
+        var session = user.Sessions.First(s => s.Status == 1 && s.UserId == user.Id);
+
+        var generalPage = user.Pages.FirstOrDefault(p => p.Title == request.TabTitle);
+        var pageInSession = session.Pages.FirstOrDefault(p => p.Title == request.TabTitle);
+
+        var pageExistsInAccount = generalPage is not null;
+        var pageExistsInSession = pageInSession is not null;
+
+        if (!pageExistsInAccount && !pageExistsInSession)
+        {
+            var accountPage = new Page
             {
-                Id = session.Id.ToString(),
-                UserId = session.UserId,
-                SessionDate = session.SessionDate,
-                Status = session.Status,
-                Time = session.Time,
-                User = new UserViewModel
-                {
-                    Email = user.Email,
-                    Id = user.Id
-                },
-                Pages = pages.Select(p => new UserPageViewModel
-                {
-                    Page = new PageViewModel
-                    {
-                        Id = p.Id.ToString(),
-                        Title = p.Title
-                    },
-                    Time = session.Time
-                }).ToList()
+                Id = ObjectId.GenerateNewId(),
+                Title = request.TabTitle,
+                Time = request.TimeSpent / 1000
             };
 
-            return viewmodel;
-        }
-
-        //// GET: TelemetrySessions/Delete/5
-        public async Task<IActionResult> Delete(string? id, CancellationToken ct = default)
-        {
-            if (id is null)
-                return NotFound();
-
-            var filter = Builders<TelemetrySession>.Filter.Where(s => s.Id == ObjectId.Parse(id));
-
-            //var telemetrySession = await _telemetrySessions.Find(s => s.Id.ToString() == id).FirstOrDefaultAsync(ct);
-            var telemetrySession = await _telemetrySessions.Find(filter).FirstOrDefaultAsync(ct);
-            if (telemetrySession is null)
+            var sessionPage = new Page
             {
-                return NotFound();
-            }
-
-            return View(await MapToViewModel(telemetrySession, ct));
-        }
-
-        //// POST: TelemetrySessions/Delete/5
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(string id, CancellationToken ct = default)
-        {
-            await _telemetrySessions
-                .DeleteOneAsync(s => s.Id.ToString() == id, cancellationToken: ct);
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        private async Task<bool> TelemetrySessionExists(string id, CancellationToken ct = default)
-        {
-            var session = await _telemetrySessions
-                .Find(s => s.Id.ToString() == id)
-                .FirstOrDefaultAsync(ct);
-
-            return session is not null;
-        }
-
-        [Authorize]
-        public async Task<IActionResult> CreateNewSession(CancellationToken ct = default)
-        {
-            var currentUser = await _userManager.GetUserAsync(User);
-            TelemetrySession session = new TelemetrySession
-            {
-                UserId = currentUser.Id,
-                Status = 1,
-                Time = 0,
-                SessionDate = DateTime.UtcNow
+                Id = ObjectId.GenerateNewId(),
+                Title = request.TabTitle,
+                Time = request.TimeSpent / 1000
             };
 
-            await _telemetrySessions.InsertOneAsync(session, cancellationToken: ct);
+            await _users.UpdateOneAsync(u => u.Id == userId, Builders<User>.Update.Push(u => u.Pages, accountPage));
 
-            return RedirectToAction("Index", "Home");
+            session.Pages.Add(sessionPage);
+
+            //session.Time += request.TimeSpent / 1000;
+            _logger.LogInformation($"session.Time zwiekszone o {request.TimeSpent / 1000}");
+                
+            var updateSessionPageDefinition = Builders<User>.Update.Set(u => u.Sessions, user.Sessions);
+                
+            await _users.UpdateOneAsync(u => u.Id == user.Id, updateSessionPageDefinition);
         }
-
-        public async Task<IActionResult> ChangeSessionStatus(string id, CancellationToken ct = default)
+        else if (!pageExistsInSession)
         {
-            var updateDefinition = Builders<TelemetrySession>.Update
-                .Set(t => t.Status, 0);
+            var sessionPage = new Page
+            {
+                Id = ObjectId.GenerateNewId(),
+                Title = request.TabTitle,
+                Time = request.TimeSpent / 1000
+            };
+                
+            session.Pages.Add(sessionPage);
 
-            await _telemetrySessions.UpdateOneAsync(s => s.UserId == id && s.Status == 1, updateDefinition,
-                cancellationToken: ct);
-            return RedirectToAction("Index", "Home");
+            var updateSessionPageDefinition = Builders<User>.Update.Set(u => u.Sessions, user.Sessions);
+                
+            await _users.FindOneAndUpdateAsync(u => u.Id == user.Id, updateSessionPageDefinition);
+
+            user.Pages.FirstOrDefault(p => p.Title == request.TabTitle).Time += request.TimeSpent / 1000;
+            var updateAccountPageDefinition = Builders<User>.Update.Set(u => u.Pages, user.Pages);
+            //session.Time += request.TimeSpent / 1000;
+            _logger.LogInformation($"session.Time zwiekszone o {request.TimeSpent / 1000}");
+
+            await _users.FindOneAndUpdateAsync(u => u.Id == user.Id, updateAccountPageDefinition);
         }
-
-        //[Authorize]
-        [HttpPost]
-        public async Task<IActionResult> SendInformationToSession([FromBody] Object data,
-            CancellationToken ct = default)
+        else
         {
-            _logger.LogInformation("Inside SendInformationToSession");
-            var data1 = JsonConvert.DeserializeObject<dynamic>(data.ToString());
-            string pageName = Convert.ToString(data1.tabTitle);
-            double seconds = Convert.ToDouble(data1.timeSpent);
-            seconds /= 1000;
-            var currentUser = await _userManager.GetUserAsync(User);
-            var session = await _telemetrySessions.Find(t => t.Status == 1 && t.UserId == currentUser.Id)
-                .FirstOrDefaultAsync(ct);
-
-            var pageExists = (await _pages.Find(p => p.Title == pageName).FirstOrDefaultAsync(ct)) is not null;
-
-            _logger.LogInformation("After PageExists");
-
-            Page page;
-            if (pageExists)
-                page = await _pages.Find(p => p.Title == pageName).FirstOrDefaultAsync(ct);
-            else
-            {
-                page = new Page()
-                {
-                    Title = pageName
-                };
-
-                await _pages.InsertOneAsync(page, cancellationToken: ct);
-            }
-
-            UserPage userPage;
-
-            _logger.LogInformation("Before ASDF");
-            var asdf = await _pages.Find(p => p.Title == pageName).FirstOrDefaultAsync(ct);
-            _logger.LogInformation("Before LONG CONDITION");
-            var condition =
-                await _userPages
-                    .Find(p => p.PageId == asdf.Id.ToString() && p.UserId == currentUser.Id &&
-                               p.TelemetrySessionId == session.Id.ToString()).FirstOrDefaultAsync(ct) is not null;
-
-            _logger.LogInformation("After LONG CONDITION");
-
-            if (condition)
-            {
-                var updateDefinition = Builders<UserPage>.Update.Inc(x => x.Time, seconds);
-
-                _logger.LogInformation("Updating LONG CONDITION");
-
-                var filter = Builders<UserPage>.Filter.Where(x =>
-                    x.UserId == currentUser.Id && x.PageId == asdf.Id.ToString() &&
-                    x.TelemetrySessionId == session.Id.ToString());
-
-                await _userPages.UpdateOneAsync(filter, updateDefinition,
-                    cancellationToken: ct);
-
-                _logger.LogInformation("AFTER Updating LONG CONDITION");
-            }
-            else
-            {
-                _logger.LogInformation("BEFORE ELSE USERPAGE");
-                userPage = new UserPage()
-                {
-                    UserId = currentUser.Id,
-                    PageId = page.Id.ToString(),
-                    TelemetrySessionId = session.Id.ToString(),
-                    Time = seconds
-                };
-
-                _logger.LogInformation("AFTER ELSE USERPAGE");
-
-                await _userPages.InsertOneAsync(userPage, cancellationToken: ct);
-
-                _logger.LogInformation("AFTER INSERT ELSE USERPAGE");
-            }
-
-            var sessionUpdateDefinition = Builders<TelemetrySession>.Update.Inc(x => x.Time, seconds);
-
-            await _telemetrySessions.UpdateOneAsync(x => x.Id == session.Id,
-                sessionUpdateDefinition, cancellationToken: ct);
-
-            _logger.LogInformation("Before OK");
-
-            return Ok();
+            user.Pages.FirstOrDefault(p => p.Title == request.TabTitle).Time += request.TimeSpent / 1000;
+            var updateAccountPageDefinition = Builders<User>.Update.Set(u => u.Pages, user.Pages);
+            await _users.UpdateOneAsync(u => u.Id == user.Id, updateAccountPageDefinition);
+            session.Pages.FirstOrDefault(p => p.Title == request.TabTitle).Time += request.TimeSpent / 1000;
+            //session.Time += request.TimeSpent / 1000;
+            _logger.LogInformation($"session.Time zwiekszone o {request.TimeSpent / 1000}");
+                
+            var updateSessionPageDefinition = Builders<User>.Update.Set(u => u.Sessions, user.Sessions);
+                
+            await _users.UpdateOneAsync(u => u.Id == user.Id, updateSessionPageDefinition);
         }
+
+        return Ok();
     }
 }

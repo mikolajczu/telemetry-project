@@ -9,14 +9,14 @@ window.addEventListener('beforeunload', async (e) => {
     const data = {tabTitle, timeSpent};
 
     try {
-        await fetch('https://localhost:7256/TelemetrySessions/SendInformationToSession', {
+        await fetch('http://localhost:5196/TelemetrySessions/SendInformationToSession', {
             method: 'POST',
             body: JSON.stringify(data),
             headers: {
                 'Content-Type': 'application/json'
             },
             credentials: "include",
-            keepalive: true
+            //keepalive: true
         });
     } catch (err) {
         console.log(err)

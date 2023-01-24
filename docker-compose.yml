@@ -9,7 +9,7 @@ services:
     ports:
       - 27017:27017
     # volumes:
-    #   - mongodb_data_container:/data/db
+    #   - ${WEBAPP_STORAGE_HOME}/site:data/db
 
   web:
     build:
@@ -25,5 +25,5 @@ services:
     volumes:
       - ${HOME}/.microsoft/usersecrets/:/root/.microsoft/usersecrets
       - ${HOME}/.aspnet/https:/root/.aspnet/https/
-    links:
-      - mongodb_container
+    # links:
+    #   - mongodb_container

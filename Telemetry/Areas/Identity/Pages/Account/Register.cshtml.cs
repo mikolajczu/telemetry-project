@@ -142,7 +142,8 @@ namespace Telemetry.Areas.Identity.Pages.Account
                     else
                     {
                         await _signInManager.SignInAsync(user, isPersistent: false);
-                        return LocalRedirect(returnUrl);
+                        //return LocalRedirect(returnUrl);
+                        return RedirectToAction("CreateNewSession", "TelemetrySessions");
                     }
                 }
                 foreach (var error in result.Errors)
